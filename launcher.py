@@ -34,6 +34,12 @@ def main() -> None:
 
     # App gọi lại chính nó ở chế độ "worker" để điều khiển Chrome
     if len(sys.argv) > 1 and sys.argv[1] == "worker":
+        # Windows: ép dùng UTF-8 để in được chữ Việt/Trung (thêm một lớp bảo vệ)
+        for stream in (sys.stdout, sys.stderr):
+            try:
+                stream.reconfigure(encoding="utf-8", errors="replace")
+            except Exception:
+                pass
         sys.argv = ["browser_worker"] + sys.argv[2:]
         runpy.run_module("browser_worker", run_name="__main__")
         return
@@ -49,7 +55,7 @@ def main() -> None:
     sys.argv = ["streamlit", "run", str(resource_dir() / "app.py"),
                 "--global.developmentMode=false", "--server.headless=true",
                 f"--server.port={PORT}", "--server.fileWatcherType=none",
-                "--browser.gatherUsageStats=false"]
+                "--browser.gatherUsageStats=false", "--client.toolbarMode=minimal"]
     sys.exit(stcli.main())
 
 

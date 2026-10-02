@@ -88,20 +88,52 @@ def open_browser(p, visible: bool | None = None):
                        "Hãy cài Google Chrome rồi thử lại.") from last_error
 
 
-def login() -> dict:
+def login(max_wait: int = 300) -> dict:
+    """Mở Douyin để đăng nhập. Tự nhận biết khi đăng nhập xong và tự đóng cửa sổ."""
     with sync_playwright() as p:
         ctx = open_browser(p, visible=True)
         page = ctx.pages[0] if ctx.pages else ctx.new_page()
-        page.goto("https://www.douyin.com/")
+
+        def logged_in():
+            """True: đã đăng nhập, False: chưa, None: cửa sổ đã bị đóng."""
+            try:
+                return any(c["name"] == "sessionid" and c["value"]
+                           for c in ctx.cookies("https://www.douyin.com"))
+            except Exception:
+                return None
+
         try:
-            page.wait_for_event("close", timeout=0)  # chờ tới khi bạn đóng cửa sổ
+            page.goto("https://www.douyin.com/", wait_until="domcontentloaded", timeout=60000)
         except Exception:
             pass
+
+        if logged_in():
+            status = "already"
+            time.sleep(2)
+        else:
+            status = "timeout"
+            deadline = time.time() + max_wait
+            while time.time() < deadline:
+                state = logged_in()
+                if state is None:
+                    status = "closed"
+                    break
+                if state:
+                    status = "ok"
+                    time.sleep(3)      # chờ Douyin lưu xong phiên đăng nhập
+                    break
+                time.sleep(2)
         try:
             ctx.close()
         except Exception:
             pass
-    return {"ok": True, "message": "Đã lưu đăng nhập."}
+
+    return {
+        "already": {"ok": True, "message": "Bạn đã đăng nhập Douyin sẵn rồi, không cần làm gì thêm."},
+        "ok": {"ok": True, "message": "Đăng nhập thành công. App đã lưu lại cho những lần sau."},
+        "closed": {"ok": False, "message": "Cửa sổ Chrome đã bị đóng trước khi đăng nhập xong. Thử lại nhé."},
+        "timeout": {"ok": False, "message": "Quá 5 phút chưa thấy đăng nhập. Bấm nút để thử lại."},
+    }[status]
 
 
 def find_play_url(data, aweme_id=None):
@@ -416,7 +448,17 @@ def acquire_lock():
     return lock
 
 
+def force_utf8_output() -> None:
+    """Windows mặc định dùng bảng mã cũ, không in được chữ Việt/Trung. Ép dùng UTF-8."""
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
+
 if __name__ == "__main__":
+    force_utf8_output()
     DEBUG_SHOT.parent.mkdir(parents=True, exist_ok=True)
     _lock = acquire_lock()
     try:

@@ -260,10 +260,11 @@ if page == "Đăng nhập Douyin":
     st.title("Đăng nhập Douyin")
     st.write("App dùng một cửa sổ Chrome riêng. Chỉ cần đăng nhập một lần, "
              "app sẽ nhớ cho những lần sau.")
-    st.write("Bấm nút bên dưới, quét mã QR bằng app Douyin trên điện thoại, "
-             "đăng nhập xong thì đóng cửa sổ Chrome đó.")
-    if st.button("Mở Chrome để đăng nhập", type="primary"):
-        with st.spinner("Đang chờ bạn đăng nhập và đóng cửa sổ Chrome..."):
+    st.write("Bấm nút bên dưới, một cửa sổ Douyin sẽ mở ra. Bấm đăng nhập và quét mã QR "
+             "bằng app Douyin trên điện thoại. **Đăng nhập xong, cửa sổ sẽ tự đóng.** "
+             "Nếu bạn đã đăng nhập từ trước, cửa sổ sẽ đóng ngay sau vài giây.")
+    if st.button("Đăng nhập Douyin", type="primary", disabled=JOB["running"]):
+        with st.spinner("Đang chờ bạn đăng nhập trong cửa sổ Chrome (tối đa 5 phút)..."):
             result = login_browser()
         (st.success if result.get("ok") else st.error)(result["message"])
 

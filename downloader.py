@@ -8,6 +8,8 @@ from pathlib import Path
 
 # Windows: không bật cửa sổ đen cho tiến trình phụ
 NO_WINDOW = 0x08000000 if os.name == "nt" else 0
+# Tiến trình phụ luôn nói chuyện bằng UTF-8 (tránh lỗi chữ Việt/Trung trên Windows)
+WORKER_ENV = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
 
 
 def _worker_cmd(args: list[str]) -> list[str]:
@@ -42,7 +44,7 @@ def _run(args: list[str], timeout: int) -> dict:
     try:
         proc = subprocess.run(_worker_cmd(args), capture_output=True, text=True,
                               encoding="utf-8", errors="ignore", timeout=timeout,
-                              creationflags=NO_WINDOW)
+                              creationflags=NO_WINDOW, env=WORKER_ENV)
     except subprocess.TimeoutExpired:
         return {"ok": False, "message": "Quá thời gian chờ. Thử lại."}
     for line in reversed(proc.stdout.splitlines()):
@@ -67,7 +69,7 @@ def get_latest(link: str) -> dict:
 def _stream(args: list[str]):
     proc = subprocess.Popen(_worker_cmd(args), stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT, text=True, encoding="utf-8",
-                            errors="ignore", creationflags=NO_WINDOW)
+                            errors="ignore", creationflags=NO_WINDOW, env=WORKER_ENV)
     tail, got_result = [], False
     for line in proc.stdout:
         line = line.rstrip("\n")
